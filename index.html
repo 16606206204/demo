@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>面积-起重量线性插值计算器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        
+        .calculator {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 600;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f4fd;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .result h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .result-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        
+        .note {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .calc-detail {
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+            border-left: 3px solid #3498db;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+        
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .data-table th {
+            background: #3498db;
+            color: white;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .warning {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>面积-起重量线性插值自动计算器</h1>
+        
+        <div class="calculator">
+            <div class="input-group">
+                <label for="areaInput">请输入目标面积（单位：㎡）：</label>
+                <input type="number" id="areaInput" placeholder="例如：2.0、4.5、7.0" step="0.01" min="0">
+            </div>
+            <button onclick="calculateWeight()">计算对应起重量</button>
+            
+            <div id="resultBox" class="result">
+                <h3>计算结果：</h3>
+                <p>目标面积：<span id="inputArea"></span> ㎡</p>
+                <p>对应起重量：<span id="resultWeight" class="result-value"></span> kg</p>
+                <div id="calcDetail" class="calc-detail"></div>
+                <p id="resultNote" class="note"></p>
+            </div>
+        </div>
+        
+        <h2>已知基础数据表</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>序号</th>
+                    <th>面积（㎡）</th>
+                    <th>起重量（kg）</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>1.00</td><td>200</td></tr>
+                <tr><td>2</td><td>1.35</td><td>300</td></tr>
+                <tr><td>3</td><td>1.76</td><td>400</td></tr>
+                <tr><td>4</td><td>2.10</td><td>500</td></tr>
+                <tr><td>5</td><td>2.40</td><td>600</td></tr>
+                <tr><td>6</td><td>2.70</td><td>700</td></tr>
+                <tr><td>7</td><td>3.00</td><td>800</td></tr>
+                <tr><td>8</td><td>3.30</td><td>900</td></tr>
+                <tr><td>9</td><td>3.60</td><td>1000</td></tr>
+                <tr><td>10</td><td>4.20</td><td>1200</td></tr>
+                <tr><td>11</td><td>5.10</td><td>1500</td></tr>
+                <tr><td>12</td><td>5.35</td><td>1600</td></tr>
+                <tr><td>13</td><td>5.82</td><td>1800</td></tr>
+                <tr><td>14</td><td>6.30</td><td>2000</td></tr>
+                <tr><td>15</td><td>7.50</td><td>2500</td></tr>
+                <tr><td>16</td><td>8.70</td><td>3000</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 基础数据数组
+        const baseData = [
+            {x: 1.00, y: 200},
+            {x: 1.35, y: 300},
+            {x: 1.76, y: 400},
+            {x: 2.10, y: 500},
+            {x: 2.40, y: 600},
+            {x: 2.70, y: 700},
+            {x: 3.00, y: 800},
+            {x: 3.30, y: 900},
+            {x: 3.60, y: 1000},
+            {x: 4.20, y: 1200},
+            {x: 5.10, y: 1500},
+            {x: 5.35, y: 1600},
+            {x: 5.82, y: 1800},
+            {x: 6.30, y: 2000},
+            {x: 7.50, y: 2500},
+            {x: 8.70, y: 3000}
+        ];
+
+        // 计算函数
+        function calculateWeight() {
+            // 获取输入值
+            const inputArea = parseFloat(document.getElementById('areaInput').value);
+            const resultBox = document.getElementById('resultBox');
+            const inputAreaSpan = document.getElementById('inputArea');
+            const resultWeightSpan = document.getElementById('resultWeight');
+            const resultNote = document.getElementById('resultNote');
+            const calcDetail = document.getElementById('calcDetail');
+
+            // 验证输入
+            if (isNaN(inputArea) || inputArea < 0) {
+                alert('请输入有效的面积数值（大于等于0）！');
+                return;
+            }
+
+            // 显示结果框
+            resultBox.style.display = 'block';
+            inputAreaSpan.textContent = inputArea.toFixed(2);
+
+            // 处理边界情况
+            if (inputArea <= 1.00) {
+                resultWeightSpan.textContent = '200';
+                calcDetail.innerHTML = `计算规则：面积≤1.00㎡，按最小起重量200kg取值`;
+                resultNote.textContent = '面积小于等于1.00㎡，按最小起重量200kg取值';
+                return;
+            }
+
+            if (inputArea >= 8.70) {
+                resultWeightSpan.textContent = '3000+';
+                calcDetail.innerHTML = `计算规则：面积≥8.70㎡，建议结合实际工况评估起重量`;
+                resultNote.textContent = '面积大于等于8.70㎡，建议结合实际工况评估起重量';
+                return;
+            }
+
+            // 找到相邻的两个数据点
+            let leftPoint, rightPoint;
+            for (let i = 0; i < baseData.length - 1; i++) {
+                if (baseData[i].x <= inputArea && baseData[i+1].x >= inputArea) {
+                    leftPoint = baseData[i];
+                    rightPoint = baseData[i+1];
+                    break;
+                }
+            }
+
+            // 线性插值计算原始值
+            const originalWeight = leftPoint.y + (rightPoint.y - leftPoint.y) * (inputArea - leftPoint.x) / (rightPoint.x - leftPoint.x);
+            let finalWeight, calcRule;
+
+            // 分段取值规则
+            if (rightPoint.y <= 1000) {
+                // 起重量≤1000kg时，按面积接近度取整值
+                const distanceToLeft = inputArea - leftPoint.x;
+                const distanceToRight = rightPoint.x - inputArea;
+                
+                if (distanceToLeft <= distanceToRight) {
+                    finalWeight = leftPoint.y;
+                    calcRule = `面积${inputArea.toFixed(2)}更接近${leftPoint.x}㎡，取对应起重量${leftPoint.y}kg`;
+                } else {
+                    finalWeight = rightPoint.y;
+                    calcRule = `面积${inputArea.toFixed(2)}更接近${rightPoint.x}㎡，取对应起重量${rightPoint.y}kg`;
+                }
+            } else {
+                // 起重量>1000kg时，向上取区间上限值
+                finalWeight = rightPoint.y;
+                calcRule = `起重量>1000kg，向上取区间上限值${rightPoint.y}kg`;
+            }
+
+            // 显示结果
+            resultWeightSpan.textContent = finalWeight;
+            calcDetail.innerHTML = `
+                <strong>计算详情：</strong><br>
+                1. 线性插值原始计算值：${originalWeight.toFixed(2)} kg<br>
+                2. 取值区间：${leftPoint.x}~${rightPoint.x}㎡（对应起重量${leftPoint.y}~${rightPoint.y}kg）<br>
+                3. 取值规则：${calcRule}
+            `;
+            resultNote.textContent = `最终取值：${finalWeight}kg（${calcRule}）`;
+        }
+
+        // 监听输入框回车事件
+        document.getElementById('areaInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                calculateWeight();
+            }
+        });
+    </script>
+</body>
+</html>
